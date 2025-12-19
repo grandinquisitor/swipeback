@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Dual N-Back</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* Start Screen */
+    #start-screen {
+      gap: 30px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin: 0;
+      text-align: center;
+    }
+
+    .settings {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .setting {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.2rem;
+    }
+
+    .setting-control {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .setting-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #4a4a6a;
+      background: transparent;
+      color: #eee;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .setting-btn:active {
+      background: #4a4a6a;
+    }
+
+    .setting-value {
+      font-size: 1.5rem;
+      min-width: 30px;
+      text-align: center;
+    }
+
+    .start-btn {
+      padding: 20px 60px;
+      font-size: 1.5rem;
+      border: none;
+      border-radius: 10px;
+      background: #4a6fa5;
+      color: white;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    .start-btn:active {
+      background: #3a5a85;
+    }
+
+    .instructions {
+      text-align: center;
+      color: #888;
+      font-size: 0.9rem;
+      max-width: 300px;
+      line-height: 1.5;
+    }
+
+    /* Game Screen */
+    #game-screen {
+      justify-content: space-between;
+      padding: 40px 20px;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 350px;
+      font-size: 1.1rem;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      color: #555;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close-btn:active {
+      color: #888;
+    }
+
+    .grid-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      position: relative;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 8px;
+      width: min(80vw, 300px);
+      height: min(80vw, 300px);
+    }
+
+    .cell {
+      background: #2a2a4a;
+      border-radius: 8px;
+      transition: background 0.1s;
+    }
+
+    .cell.active {
+      background: #4a6fa5;
+    }
+
+    .gesture-hint {
+      text-align: center;
+      color: #666;
+      font-size: 0.85rem;
+      padding: 20px;
+    }
+
+    .feedback {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+
+    .feedback.show {
+      opacity: 1;
+    }
+
+    /* Results Screen */
+    #results-screen {
+      gap: 30px;
+    }
+
+    .results {
+      text-align: center;
+    }
+
+    .results h2 {
+      font-size: 2rem;
+      margin: 0 0 20px 0;
+    }
+
+    .score-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 1.2rem;
+    }
+
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 40px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen active">
+    <h1>Dual N-Back</h1>
+
+    <div class="settings">
+      <div class="setting">
+        <span>N-Back Level</span>
+        <div class="setting-control">
+          <button class="setting-btn" onclick="adjustN(-1)">−</button>
+          <span id="n-value" class="setting-value">2</span>
+          <button class="setting-btn" onclick="adjustN(1)">+</button>
+        </div>
+      </div>
+
+      <div class="setting">
+        <span>Trials</span>
+        <div class="setting-control">
+          <button class="setting-btn" onclick="adjustTrials(-5)">−</button>
+          <span id="trials-value" class="setting-value">20</span>
+          <button class="setting-btn" onclick="adjustTrials(5)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" onclick="startGame()">Start</button>
+
+    <div class="instructions">
+      <strong>Gestures:</strong><br>
+      Swipe ← for position match<br>
+      Swipe → for audio match<br>
+      Swipe ↑ for both<br>
+      Swipe ↓ for neither
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen">
+    <button class="close-btn" ontouchend="exitGame(); event.stopPropagation();" onclick="exitGame()">✕</button>
+    <div class="status-bar">
+      <span>Trial: <span id="trial-num">0</span>/<span id="trial-total">20</span></span>
+      <span id="n-display">2-Back</span>
+    </div>
+
+    <div class="grid-container">
+      <div class="grid">
+        <div class="cell" data-pos="0"></div>
+        <div class="cell" data-pos="1"></div>
+        <div class="cell" data-pos="2"></div>
+        <div class="cell" data-pos="3"></div>
+        <div class="cell" data-pos="4"></div>
+        <div class="cell" data-pos="5"></div>
+        <div class="cell" data-pos="6"></div>
+        <div class="cell" data-pos="7"></div>
+        <div class="cell" data-pos="8"></div>
+      </div>
+      <div id="feedback" class="feedback"></div>
+    </div>
+
+    <div class="gesture-hint">
+      ← position &nbsp;|&nbsp; → audio &nbsp;|&nbsp; ↑ both &nbsp;|&nbsp; ↓ neither
+    </div>
+  </div>
+
+  <!-- Results Screen -->
+  <div id="results-screen" class="screen">
+    <div class="results">
+      <h2>Results</h2>
+      <div class="score-breakdown">
+        <div class="score-row">
+          <span>Position:</span>
+          <span id="position-score">0%</span>
+        </div>
+        <div class="score-row">
+          <span>Audio:</span>
+          <span id="audio-score">0%</span>
+        </div>
+        <div class="score-row">
+          <span>Overall:</span>
+          <span id="overall-score">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" onclick="showScreen('start-screen')">Play Again</button>
+  </div>
+
+  <script>
+    // Game state
+    let nLevel = 2;
+    let numTrials = 20;
+    let currentTrial = 0;
+    let history = [];
+    let responses = [];
+    let gameActive = false;
+    let stimulusShown = false;
+    let gameTimeout = null;
+
+    // Audio context for sounds
+    let audioCtx = null;
+    const letters = ['C', 'H', 'K', 'L', 'Q', 'R', 'S', 'T'];
+    const letterFreqs = {
+      'C': 261.63, 'H': 293.66, 'K': 329.63, 'L': 349.23,
+      'Q': 392.00, 'R': 440.00, 'S': 493.88, 'T': 523.25
+    };
+
+    // Touch handling
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const SWIPE_THRESHOLD = 50;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playTone(letter) {
+      if (!audioCtx) return;
+
+      const freq = letterFreqs[letter];
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+    function playClick() {
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.frequency.value = 800;
+      osc.type = 'square';
+
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.05);
+    }
+
+    function adjustN(delta) {
+      nLevel = Math.max(1, Math.min(9, nLevel + delta));
+      document.getElementById('n-value').textContent = nLevel;
+    }
+
+    function adjustTrials(delta) {
+      numTrials = Math.max(10, Math.min(50, numTrials + delta));
+      document.getElementById('trials-value').textContent = numTrials;
+    }
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    function exitGame() {
+      gameActive = false;
+      if (gameTimeout) {
+        clearTimeout(gameTimeout);
+        gameTimeout = null;
+      }
+      hideStimulus();
+      showScreen('start-screen');
+    }
+
+    function startGame() {
+      initAudio();
+
+      currentTrial = 0;
+      history = [];
+      responses = [];
+      gameActive = true;
+
+      document.getElementById('trial-total').textContent = numTrials;
+      document.getElementById('n-display').textContent = `${nLevel}-Back`;
+
+      showScreen('game-screen');
+
+      gameTimeout = setTimeout(nextTrial, 1000);
+    }
+
+    function nextTrial() {
+      if (currentTrial >= numTrials) {
+        endGame();
+        return;
+      }
+
+      // Determine if this should be a match (30% chance for each type after n trials)
+      let position, letter;
+
+      if (currentTrial >= nLevel && Math.random() < 0.3) {
+        position = history[currentTrial - nLevel].position;
+      } else {
+        position = Math.floor(Math.random() * 9);
+      }
+
+      if (currentTrial >= nLevel && Math.random() < 0.3) {
+        letter = history[currentTrial - nLevel].letter;
+      } else {
+        letter = letters[Math.floor(Math.random() * letters.length)];
+      }
+
+      history.push({ position, letter });
+      responses.push({ position: null, audio: null });
+
+      currentTrial++;
+      document.getElementById('trial-num').textContent = currentTrial;
+
+      // Show stimulus
+      showStimulus(position, letter);
+      stimulusShown = true;
+
+      // Hide after 500ms, then wait before next trial
+      gameTimeout = setTimeout(() => {
+        if (!gameActive) return;
+        hideStimulus();
+        stimulusShown = false;
+
+        gameTimeout = setTimeout(() => {
+          if (!gameActive) return;
+          nextTrial();
+        }, 2000);
+      }, 500);
+    }
+
+    function showStimulus(position, letter) {
+      document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+      document.querySelector(`.cell[data-pos="${position}"]`).classList.add('active');
+      playTone(letter);
+    }
+
+    function hideStimulus() {
+      document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+    }
+
+    function handleInput(direction) {
+      if (!gameActive || currentTrial === 0) return;
+
+      playClick();
+
+      const responseIndex = currentTrial - 1;
+
+      // Map swipe to response
+      // left = position match, right = audio match, up = both, down = neither
+      switch(direction) {
+        case 'left':
+          responses[responseIndex].position = true;
+          responses[responseIndex].audio = false;
+          showFeedback('←');
+          break;
+        case 'right':
+          responses[responseIndex].position = false;
+          responses[responseIndex].audio = true;
+          showFeedback('→');
+          break;
+        case 'up':
+          responses[responseIndex].position = true;
+          responses[responseIndex].audio = true;
+          showFeedback('↑');
+          break;
+        case 'down':
+          responses[responseIndex].position = false;
+          responses[responseIndex].audio = false;
+          showFeedback('↓');
+          break;
+      }
+    }
+
+    function showFeedback(symbol) {
+      const fb = document.getElementById('feedback');
+      fb.textContent = symbol;
+      fb.classList.add('show');
+      setTimeout(() => fb.classList.remove('show'), 300);
+    }
+
+    function endGame() {
+      gameActive = false;
+
+      // Calculate scores
+      let positionCorrect = 0;
+      let audioCorrect = 0;
+      let positionTotal = 0;
+      let audioTotal = 0;
+
+      for (let i = nLevel; i < history.length; i++) {
+        const wasPositionMatch = history[i].position === history[i - nLevel].position;
+        const wasAudioMatch = history[i].letter === history[i - nLevel].letter;
+
+        const response = responses[i];
+        const respondedPosition = response.position === true;
+        const respondedAudio = response.audio === true;
+
+        positionTotal++;
+        audioTotal++;
+
+        if (wasPositionMatch === respondedPosition) positionCorrect++;
+        if (wasAudioMatch === respondedAudio) audioCorrect++;
+      }
+
+      const positionPct = Math.round((positionCorrect / positionTotal) * 100);
+      const audioPct = Math.round((audioCorrect / audioTotal) * 100);
+      const overallPct = Math.round(((positionCorrect + audioCorrect) / (positionTotal + audioTotal)) * 100);
+
+      document.getElementById('position-score').textContent = `${positionPct}%`;
+      document.getElementById('audio-score').textContent = `${audioPct}%`;
+      document.getElementById('overall-score').textContent = `${overallPct}%`;
+
+      showScreen('results-screen');
+    }
+
+    // Touch event handlers - limited to game screen only
+    const gameScreen = document.getElementById('game-screen');
+
+    gameScreen.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      e.preventDefault();
+    }, { passive: false });
+
+    gameScreen.addEventListener('touchend', (e) => {
+      if (!gameActive) return;
+
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+
+      if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) {
+        return; // Not a swipe
+      }
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        handleInput(dx > 0 ? 'right' : 'left');
+      } else {
+        handleInput(dy > 0 ? 'down' : 'up');
+      }
+
+      e.preventDefault();
+    }, { passive: false });
+
+    // Prevent default touch behaviors on game screen only
+    gameScreen.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+  </script>
+</body>
+</html>
