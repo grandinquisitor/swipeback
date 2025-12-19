@@ -174,17 +174,24 @@
     }
 
     .status-bar {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
       width: 100%;
       max-width: 350px;
       font-size: 1.1rem;
     }
 
-    .close-btn {
-      position: absolute;
-      top: 15px;
-      left: 15px;
+    .status-bar .trial-info {
+      justify-self: start;
+    }
+
+    .status-bar .n-display {
+      justify-self: center;
+    }
+
+    .status-bar .close-btn {
+      justify-self: end;
       width: 36px;
       height: 36px;
       border: none;
@@ -195,7 +202,7 @@
       line-height: 1;
     }
 
-    .close-btn:active {
+    .status-bar .close-btn:active {
       color: #888;
     }
 
@@ -308,10 +315,10 @@
 
   <!-- Game Screen -->
   <div id="game-screen" class="screen">
-    <button class="close-btn" ontouchend="exitGame(); event.stopPropagation();" onclick="exitGame()">✕</button>
     <div class="status-bar">
-      <span>Trial: <span id="trial-num">0</span>/<span id="trial-total">20</span></span>
-      <span id="n-display">2-Back</span>
+      <span class="trial-info">Trial: <span id="trial-num">0</span>/<span id="trial-total">20</span></span>
+      <span class="n-display" id="n-display">2-Back</span>
+      <button class="close-btn" ontouchend="exitGame(); event.stopPropagation();" onclick="exitGame()">✕</button>
     </div>
 
     <div class="grid-container">
