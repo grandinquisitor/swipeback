@@ -1,10 +1,10 @@
-const CACHE_NAME = 'dual-n-back-v1';
+const CACHE_NAME = 'v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icons/icon192.png',
-  '/icons/icon512.png'
+  '/icons/icon512.png',
   '/audio/corsica/a.webm',
   '/audio/corsica/b.webm',
   '/audio/corsica/c.webm',
@@ -38,6 +38,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting()) // Activate immediately
   );
 });
 
@@ -49,7 +50,7 @@ self.addEventListener('activate', (event) => {
         keys.filter(key => key !== CACHE_NAME)
             .map(key => caches.delete(key))
       )
-    )
+    ).then(() => self.clients.claim()) // Take control immediately
   );
 });
 
