@@ -115,6 +115,58 @@
       line-height: 1.5;
     }
 
+    /* Last Results Display */
+    .last-results {
+      display: none;
+      background: #2a2a4a;
+      border-radius: 12px;
+      padding: 20px 30px;
+      text-align: center;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .last-results.show {
+      display: block;
+    }
+
+    .last-results h3 {
+      margin: 0 0 15px 0;
+      font-size: 1.1rem;
+      color: #aaa;
+    }
+
+    .last-results .scores {
+      display: flex;
+      justify-content: space-around;
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .last-results .score-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .last-results .score-label {
+      color: #888;
+      font-size: 0.85rem;
+    }
+
+    .last-results .score-value {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+
+    .level-up-message {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #4a4a6a;
+      color: #6adb6a;
+      font-size: 0.95rem;
+    }
+
     /* Game Screen */
     #game-screen {
       justify-content: space-between;
@@ -196,39 +248,32 @@
     .feedback.show {
       opacity: 1;
     }
-
-    /* Results Screen */
-    #results-screen {
-      gap: 30px;
-    }
-
-    .results {
-      text-align: center;
-    }
-
-    .results h2 {
-      font-size: 2rem;
-      margin: 0 0 20px 0;
-    }
-
-    .score-breakdown {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      font-size: 1.2rem;
-    }
-
-    .score-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 40px;
-    }
   </style>
 </head>
 <body>
   <!-- Start Screen -->
   <div id="start-screen" class="screen active">
     <h1>Dual N-Back</h1>
+
+    <!-- Last Results (shown after completing a game) -->
+    <div id="last-results" class="last-results">
+      <h3>Last Round</h3>
+      <div class="scores">
+        <div class="score-item">
+          <span class="score-label">Position</span>
+          <span id="last-position" class="score-value">0%</span>
+        </div>
+        <div class="score-item">
+          <span class="score-label">Audio</span>
+          <span id="last-audio" class="score-value">0%</span>
+        </div>
+        <div class="score-item">
+          <span class="score-label">Overall</span>
+          <span id="last-overall" class="score-value">0%</span>
+        </div>
+      </div>
+      <div id="level-up-message" class="level-up-message" style="display: none;"></div>
+    </div>
 
     <div class="settings">
       <div class="setting">
@@ -289,29 +334,6 @@
     </div>
   </div>
 
-  <!-- Results Screen -->
-  <div id="results-screen" class="screen">
-    <div class="results">
-      <h2>Results</h2>
-      <div class="score-breakdown">
-        <div class="score-row">
-          <span>Position:</span>
-          <span id="position-score">0%</span>
-        </div>
-        <div class="score-row">
-          <span>Audio:</span>
-          <span id="audio-score">0%</span>
-        </div>
-        <div class="score-row">
-          <span>Overall:</span>
-          <span id="overall-score">0%</span>
-        </div>
-      </div>
-    </div>
-
-    <button class="start-btn" onclick="showScreen('start-screen')">Play Again</button>
-  </div>
-
   <script>
     // Game state
     let nLevel = 2;
@@ -322,6 +344,9 @@
     let gameActive = false;
     let stimulusShown = false;
     let gameTimeout = null;
+
+    // Threshold for leveling up (80%)
+    const LEVEL_UP_THRESHOLD = 80;
 
     // Audio context for sounds
     let audioCtx = null;
@@ -544,11 +569,27 @@
       const audioPct = Math.round((audioCorrect / audioTotal) * 100);
       const overallPct = Math.round(((positionCorrect + audioCorrect) / (positionTotal + audioTotal)) * 100);
 
-      document.getElementById('position-score').textContent = `${positionPct}%`;
-      document.getElementById('audio-score').textContent = `${audioPct}%`;
-      document.getElementById('overall-score').textContent = `${overallPct}%`;
+      // Update the last results display
+      document.getElementById('last-position').textContent = `${positionPct}%`;
+      document.getElementById('last-audio').textContent = `${audioPct}%`;
+      document.getElementById('last-overall').textContent = `${overallPct}%`;
 
-      showScreen('results-screen');
+      // Show the results panel
+      document.getElementById('last-results').classList.add('show');
+
+      // Check if player should level up
+      const levelUpMessage = document.getElementById('level-up-message');
+      if (overallPct >= LEVEL_UP_THRESHOLD && nLevel < 9) {
+        nLevel++;
+        document.getElementById('n-value').textContent = nLevel;
+        levelUpMessage.textContent = `Level up! Now playing ${nLevel}-Back`;
+        levelUpMessage.style.display = 'block';
+      } else {
+        levelUpMessage.style.display = 'none';
+      }
+
+      // Return to start screen
+      showScreen('start-screen');
     }
 
     // Touch event handlers - limited to game screen only
