@@ -395,6 +395,7 @@ function endGame() {
   gameActive = false;
 
   const scores = calculateScores(history, responses, nLevel);
+  recordSession(nLevel, scores, numTrials);
   updateResultsUI(scores);
 
   showScreen('start-screen');
@@ -434,6 +435,174 @@ gameScreen.addEventListener('touchend', (e) => {
 gameScreen.addEventListener('touchmove', (e) => {
   e.preventDefault();
 }, { passive: false });
+
+// ===========================================
+// LOCAL STORAGE STATS
+// ===========================================
+const STATS_KEY = 'swipeback_stats';
+const MAX_HISTORY = 30;
+
+function getStats() {
+  try {
+    const stored = localStorage.getItem(STATS_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn('Failed to load stats:', e);
+  }
+
+  return {
+    firstPlayed: null,
+    lastPlayed: null,
+    totalSessions: 0,
+    totalTrials: 0,
+    levels: {},  // { "2": { attempts: 5, totalScore: 360, bestScore: 88 }, ... }
+    history: []  // [{ date, nLevel, positionPct, audioPct, overallPct }, ...]
+  };
+}
+
+function saveStats(stats) {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch (e) {
+    console.warn('Failed to save stats:', e);
+  }
+}
+
+function recordSession(nLevel, scores, trials) {
+  const stats = getStats();
+  const now = new Date().toISOString();
+
+  // Update timestamps
+  if (!stats.firstPlayed) {
+    stats.firstPlayed = now;
+  }
+  stats.lastPlayed = now;
+
+  // Update totals
+  stats.totalSessions++;
+  stats.totalTrials += trials;
+
+  // Update per-level stats
+  const levelKey = String(nLevel);
+  if (!stats.levels[levelKey]) {
+    stats.levels[levelKey] = { attempts: 0, totalScore: 0, bestScore: 0 };
+  }
+  stats.levels[levelKey].attempts++;
+  stats.levels[levelKey].totalScore += scores.overallPct;
+  stats.levels[levelKey].bestScore = Math.max(stats.levels[levelKey].bestScore, scores.overallPct);
+
+  // Add to history
+  stats.history.push({
+    date: now,
+    nLevel,
+    positionPct: scores.positionPct,
+    audioPct: scores.audioPct,
+    overallPct: scores.overallPct
+  });
+
+  // Trim history to max size
+  if (stats.history.length > MAX_HISTORY) {
+    stats.history = stats.history.slice(-MAX_HISTORY);
+  }
+
+  saveStats(stats);
+}
+
+function toggleStats() {
+  const modal = document.getElementById('stats-modal');
+  if (modal.classList.contains('active')) {
+    modal.classList.remove('active');
+  } else {
+    renderStats();
+    modal.classList.add('active');
+  }
+}
+
+function renderStats() {
+  const stats = getStats();
+  const body = document.getElementById('stats-body');
+
+  if (stats.totalSessions === 0) {
+    body.innerHTML = '<div class="no-stats">No sessions yet.<br>Play a round to see your stats!</div>';
+    return;
+  }
+
+  // Calculate summary stats
+  const avgScore = stats.history.length > 0
+    ? Math.round(stats.history.reduce((sum, s) => sum + s.overallPct, 0) / stats.history.length)
+    : 0;
+
+  const highestLevel = Object.keys(stats.levels).reduce((max, lvl) =>
+    Math.max(max, parseInt(lvl)), 0);
+
+  // Build HTML
+  let html = `
+    <div class="stats-summary">
+      <div class="stats-summary-item">
+        <span class="label">Sessions</span>
+        <span class="value">${stats.totalSessions}</span>
+      </div>
+      <div class="stats-summary-item">
+        <span class="label">Total Trials</span>
+        <span class="value">${stats.totalTrials}</span>
+      </div>
+      <div class="stats-summary-item">
+        <span class="label">Avg Score</span>
+        <span class="value">${avgScore}%</span>
+      </div>
+      <div class="stats-summary-item">
+        <span class="label">Highest Level</span>
+        <span class="value">${highestLevel}-Back</span>
+      </div>
+    </div>
+  `;
+
+  // Per-level breakdown
+  const levelKeys = Object.keys(stats.levels).sort((a, b) => parseInt(a) - parseInt(b));
+  if (levelKeys.length > 0) {
+    html += '<div class="stats-section-title">By Level</div><div class="level-stats">';
+    for (const lvl of levelKeys) {
+      const level = stats.levels[lvl];
+      const avg = Math.round(level.totalScore / level.attempts);
+      html += `
+        <div class="level-stat-row">
+          <span class="level-name">${lvl}-Back</span>
+          <span class="level-details">${level.attempts} sessions, avg ${avg}%, best ${level.bestScore}%</span>
+        </div>
+      `;
+    }
+    html += '</div>';
+  }
+
+  // Recent sessions
+  if (stats.history.length > 0) {
+    html += '<div class="stats-section-title">Recent Sessions</div><div class="recent-sessions">';
+    const recent = stats.history.slice(-10).reverse();
+    for (const session of recent) {
+      const date = new Date(session.date);
+      const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      html += `
+        <div class="session-row">
+          <span class="session-date">${dateStr}</span>
+          <span class="session-level">${session.nLevel}-Back</span>
+          <span class="session-score">${session.overallPct}%</span>
+        </div>
+      `;
+    }
+    html += '</div>';
+  }
+
+  body.innerHTML = html;
+}
+
+function confirmClearStats() {
+  if (confirm('Clear all statistics? This cannot be undone.')) {
+    localStorage.removeItem(STATS_KEY);
+    renderStats();
+  }
+}
 
 // Start loading audio files on page load
 loadAudioFiles();

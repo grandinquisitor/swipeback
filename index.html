@@ -64,6 +64,22 @@
       Swipe ↑ for both<br>
       Swipe ↓ for neither
     </div>
+
+    <button class="stats-btn" onclick="toggleStats()">Stats 📊</button>
+  </div>
+
+  <!-- Stats Modal -->
+  <div id="stats-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Statistics</h2>
+        <button class="close-btn" onclick="toggleStats()">✕</button>
+      </div>
+      <div id="stats-body" class="stats-body">
+        <!-- Populated by JS -->
+      </div>
+      <button class="clear-stats-btn" onclick="confirmClearStats()">Clear All Stats</button>
+    </div>
   </div>
 
   <!-- Game Screen -->
