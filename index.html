@@ -108,12 +108,29 @@
       background: #3a5a85;
     }
 
+    .start-btn:disabled {
+      background: #3a3a5a;
+      color: #888;
+      cursor: not-allowed;
+    }
+
     .instructions {
       text-align: center;
       color: #888;
       font-size: 0.9rem;
       max-width: 300px;
       line-height: 1.5;
+    }
+
+    /* Loading indicator */
+    .loading-status {
+      font-size: 0.85rem;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-status.error {
+      color: #e55;
     }
 
     /* Last Results Display */
@@ -303,7 +320,8 @@
       </div>
     </div>
 
-    <button class="start-btn" onclick="startGame()">Start</button>
+    <button id="start-btn" class="start-btn" onclick="startGame()" disabled>Loading...</button>
+    <div id="loading-status" class="loading-status"></div>
 
     <div class="instructions">
       <strong>Gestures:</strong><br>
@@ -343,60 +361,143 @@
   </div>
 
   <script>
-    // Game state
-    let nLevel = 2;
-    let numTrials = 20;
-    let currentTrial = 0;
-    let history = [];
-    let responses = [];
-    let gameActive = false;
-    let stimulusShown = false;
-    let gameTimeout = null;
+    // ===========================================
+    // LETTER DISTRIBUTION CONFIGURATION
+    // ===========================================
+    // Change this array to use different letter sets.
+    // Options based on research:
+    //   - Brainworkshop: ['C', 'H', 'J', 'K', 'L', 'Q', 'R', 'S', 'T'] (phonetically distinct)
+    //   - Jaeggi 2003:   ['B', 'C', 'D', 'G', 'H', 'K', 'P', 'Q', 'T', 'W'] (more rhyming = harder)
+    //   - Full alphabet: All 26 letters available in /audio/corsica/
+    //
+    // For phonetically similar challenge sets, consider rotating groups:
+    //   - Group 1: B, C, D, P, T, V, Z (maybe E)
+    //   - Group 2: F, S, X
+    //   - Group 3: N, M (maybe L)
+    //   - Group 4: J, A, K
+    //   - Group 5: I, Y
 
-    // Threshold for leveling up (80%)
-    const LEVEL_UP_THRESHOLD = 80;
-
-    // Audio context for sounds
-    let audioCtx = null;
-    const letters = ['C', 'H', 'K', 'L', 'Q', 'R', 'S', 'T'];
-    const letterFreqs = {
-      'C': 261.63, 'H': 293.66, 'K': 329.63, 'L': 349.23,
-      'Q': 392.00, 'R': 440.00, 'S': 493.88, 'T': 523.25
+    const LETTER_DISTRIBUTIONS = {
+      brainworkshop: ['C', 'H', 'J', 'K', 'L', 'Q', 'R', 'S', 'T'],
+      jaeggi2003: ['B', 'C', 'D', 'G', 'H', 'K', 'P', 'Q', 'T', 'W'],
+      phoneticallyDistinct: ['C', 'H', 'K', 'L', 'Q', 'R', 'S', 'T'],
+      rhymingChallenge: ['B', 'C', 'D', 'P', 'T', 'V', 'Z'],
+      fullAlphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
     };
 
-    // Touch handling
-    let touchStartX = 0;
-    let touchStartY = 0;
-    const SWIPE_THRESHOLD = 50;
+    // Current active letter set - change this to switch distributions
+    const ACTIVE_DISTRIBUTION = 'brainworkshop';
+    const letters = LETTER_DISTRIBUTIONS[ACTIVE_DISTRIBUTION];
 
-    function initAudio() {
+    // Audio configuration
+    const AUDIO_BASE_PATH = 'audio/corsica';
+    const AUDIO_FORMAT = 'webm';
+
+    // ===========================================
+    // AUDIO SYSTEM
+    // ===========================================
+    let audioCtx = null;
+    const audioBuffers = new Map(); // letter -> AudioBuffer
+    let audioLoaded = false;
+
+    async function initAudio() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
+
+      // Resume context if suspended (needed for some browsers)
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
     }
 
-    function playTone(letter) {
-      if (!audioCtx) return;
+    async function loadAudioFiles() {
+      const startBtn = document.getElementById('start-btn');
+      const statusEl = document.getElementById('loading-status');
 
-      const freq = letterFreqs[letter];
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+      statusEl.textContent = `Loading audio (0/${letters.length})...`;
+      statusEl.classList.remove('error');
 
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
+      let loaded = 0;
+      let failed = [];
 
-      osc.frequency.value = freq;
-      osc.type = 'sine';
+      for (const letter of letters) {
+        try {
+          const url = `${AUDIO_BASE_PATH}/${letter.toLowerCase()}.${AUDIO_FORMAT}`;
+          const response = await fetch(url);
 
-      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
 
-      osc.start(audioCtx.currentTime);
-      osc.stop(audioCtx.currentTime + 0.5);
+          const arrayBuffer = await response.arrayBuffer();
+
+          // Create audio context if not exists (needed for decoding)
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+
+          const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+          audioBuffers.set(letter, audioBuffer);
+
+          loaded++;
+          statusEl.textContent = `Loading audio (${loaded}/${letters.length})...`;
+        } catch (err) {
+          console.error(`Failed to load audio for letter ${letter}:`, err);
+          failed.push(letter);
+        }
+      }
+
+      if (failed.length > 0) {
+        statusEl.textContent = `Warning: Failed to load: ${failed.join(', ')}`;
+        statusEl.classList.add('error');
+
+        // Still allow playing if at least some letters loaded
+        if (loaded >= letters.length / 2) {
+          audioLoaded = true;
+          startBtn.disabled = false;
+          startBtn.textContent = 'Start';
+        } else {
+          startBtn.textContent = 'Audio Error';
+        }
+      } else {
+        statusEl.textContent = '';
+        audioLoaded = true;
+        startBtn.disabled = false;
+        startBtn.textContent = 'Start';
+      }
+    }
+
+    function playLetter(letter) {
+      if (!audioCtx || !audioBuffers.has(letter)) {
+        console.warn(`Cannot play letter ${letter}: audio not loaded`);
+        return;
+      }
+
+      // Resume context if suspended
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      const buffer = audioBuffers.get(letter);
+      const source = audioCtx.createBufferSource();
+      const gainNode = audioCtx.createGain();
+
+      source.buffer = buffer;
+      source.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      gainNode.gain.value = 1.0;
+      source.start(0);
     }
 
     function playClick() {
       if (!audioCtx) return;
+
+      // Resume context if suspended
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
 
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -414,6 +515,29 @@
       osc.stop(audioCtx.currentTime + 0.05);
     }
 
+    // ===========================================
+    // GAME STATE
+    // ===========================================
+    let nLevel = 2;
+    let numTrials = 20;
+    let currentTrial = 0;
+    let history = [];
+    let responses = [];
+    let gameActive = false;
+    let stimulusShown = false;
+    let gameTimeout = null;
+
+    // Threshold for leveling up (80%)
+    const LEVEL_UP_THRESHOLD = 80;
+
+    // Touch handling
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const SWIPE_THRESHOLD = 50;
+
+    // ===========================================
+    // UI FUNCTIONS
+    // ===========================================
     function adjustN(delta) {
       nLevel = Math.max(1, Math.min(9, nLevel + delta));
       document.getElementById('n-value').textContent = nLevel;
@@ -439,8 +563,11 @@
       showScreen('start-screen');
     }
 
-    function startGame() {
-      initAudio();
+    // ===========================================
+    // GAME LOGIC
+    // ===========================================
+    async function startGame() {
+      await initAudio();
 
       currentTrial = 0;
       history = [];
@@ -502,7 +629,7 @@
     function showStimulus(position, letter) {
       document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
       document.querySelector(`.cell[data-pos="${position}"]`).classList.add('active');
-      playTone(letter);
+      playLetter(letter);
     }
 
     function hideStimulus() {
@@ -600,7 +727,9 @@
       showScreen('start-screen');
     }
 
-    // Touch event handlers - limited to game screen only
+    // ===========================================
+    // TOUCH HANDLING
+    // ===========================================
     const gameScreen = document.getElementById('game-screen');
 
     gameScreen.addEventListener('touchstart', (e) => {
@@ -632,6 +761,16 @@
     gameScreen.addEventListener('touchmove', (e) => {
       e.preventDefault();
     }, { passive: false });
+
+    // ===========================================
+    // INITIALIZATION
+    // ===========================================
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    // Start loading audio files on page load
+    loadAudioFiles();
   </script>
 </body>
 </html>
