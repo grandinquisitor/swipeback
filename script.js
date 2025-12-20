@@ -145,7 +145,7 @@ function playClick() {
   osc.frequency.value = 800;
   osc.type = 'square';
 
-  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
 
   osc.start(audioCtx.currentTime);
