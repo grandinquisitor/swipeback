@@ -32,7 +32,10 @@ body {
 
 /* Start Screen */
 #start-screen {
-  gap: 30px;
+  gap: 20px;
+  justify-content: safe center;
+  overflow-y: auto;
+  padding: 30px 20px;
 }
 
 h1 {
@@ -84,14 +87,14 @@ h1 {
 }
 
 .start-btn {
-  padding: 20px 60px;
+  padding: 18px 60px;
   font-size: 1.5rem;
   border: none;
   border-radius: 10px;
   background: #4a6fa5;
   color: white;
   cursor: pointer;
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 .start-btn:active {
@@ -128,7 +131,7 @@ h1 {
   display: none;
   background: #2a2a4a;
   border-radius: 12px;
-  padding: 20px 30px;
+  padding: 15px 25px;
   text-align: center;
   width: 100%;
   max-width: 300px;
@@ -139,8 +142,8 @@ h1 {
 }
 
 .last-results h3 {
-  margin: 0 0 15px 0;
-  font-size: 1.1rem;
+  margin: 0 0 10px 0;
+  font-size: 1rem;
   color: #aaa;
 }
 
@@ -168,11 +171,11 @@ h1 {
 }
 
 .level-up-message {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid #4a4a6a;
   color: #6adb6a;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 /* Game Screen */
