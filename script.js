@@ -313,14 +313,16 @@ function showFeedback(symbol) {
   setTimeout(() => fb.classList.remove('show'), 300);
 }
 
-function endGame() {
-  gameActive = false;
+// ===========================================
+// SCORE CALCULATION
+// ===========================================
+// Uses Brainworkshop's method: TP / (TP + FP + FN)
+// This ignores true negatives, measuring only "active" performance.
+// A player who never responds scores 0%, not 70%+ from TN inflation.
 
-  // Calculate scores
-  let positionCorrect = 0;
-  let audioCorrect = 0;
-  let positionTotal = 0;
-  let audioTotal = 0;
+function calculateScores(history, responses, nLevel) {
+  let position = { tp: 0, fp: 0, fn: 0 };
+  let audio = { tp: 0, fp: 0, fn: 0 };
 
   for (let i = nLevel; i < history.length; i++) {
     const wasPositionMatch = history[i].position === history[i - nLevel].position;
@@ -330,28 +332,56 @@ function endGame() {
     const respondedPosition = response.position === true;
     const respondedAudio = response.audio === true;
 
-    positionTotal++;
-    audioTotal++;
+    // Position scoring
+    if (wasPositionMatch && respondedPosition) {
+      position.tp++;
+    } else if (!wasPositionMatch && respondedPosition) {
+      position.fp++;
+    } else if (wasPositionMatch && !respondedPosition) {
+      position.fn++;
+    }
+    // True negatives (wasPositionMatch=false, respondedPosition=false) are ignored
 
-    if (wasPositionMatch === respondedPosition) positionCorrect++;
-    if (wasAudioMatch === respondedAudio) audioCorrect++;
+    // Audio scoring
+    if (wasAudioMatch && respondedAudio) {
+      audio.tp++;
+    } else if (!wasAudioMatch && respondedAudio) {
+      audio.fp++;
+    } else if (wasAudioMatch && !respondedAudio) {
+      audio.fn++;
+    }
+    // True negatives ignored
   }
 
-  const positionPct = Math.round((positionCorrect / positionTotal) * 100);
-  const audioPct = Math.round((audioCorrect / audioTotal) * 100);
-  const overallPct = Math.round(((positionCorrect + audioCorrect) / (positionTotal + audioTotal)) * 100);
+  // Brainworkshop formula: TP / (TP + FP + FN)
+  const calcPct = (stats) => {
+    const denom = stats.tp + stats.fp + stats.fn;
+    return denom === 0 ? 0 : Math.round((stats.tp / denom) * 100);
+  };
 
-  // Update the last results display
-  document.getElementById('last-position').textContent = `${positionPct}%`;
-  document.getElementById('last-audio').textContent = `${audioPct}%`;
-  document.getElementById('last-overall').textContent = `${overallPct}%`;
+  const positionPct = calcPct(position);
+  const audioPct = calcPct(audio);
 
-  // Show the results panel
+  // Overall: combine all TP, FP, FN
+  const overallDenom = position.tp + position.fp + position.fn + audio.tp + audio.fp + audio.fn;
+  const overallPct = overallDenom === 0 ? 0 : Math.round(((position.tp + audio.tp) / overallDenom) * 100);
+
+  return { positionPct, audioPct, overallPct };
+}
+
+// ===========================================
+// RESULTS UI
+// ===========================================
+
+function updateResultsUI(scores) {
+  document.getElementById('last-position').textContent = `${scores.positionPct}%`;
+  document.getElementById('last-audio').textContent = `${scores.audioPct}%`;
+  document.getElementById('last-overall').textContent = `${scores.overallPct}%`;
+
   document.getElementById('last-results').classList.add('show');
 
-  // Check if player should level up
   const levelUpMessage = document.getElementById('level-up-message');
-  if (overallPct >= LEVEL_UP_THRESHOLD && nLevel < 9) {
+  if (scores.overallPct >= LEVEL_UP_THRESHOLD && nLevel < 9) {
     nLevel++;
     document.getElementById('n-value').textContent = nLevel;
     levelUpMessage.textContent = `Level up! Now playing ${nLevel}-Back`;
@@ -359,8 +389,14 @@ function endGame() {
   } else {
     levelUpMessage.style.display = 'none';
   }
+}
 
-  // Return to start screen
+function endGame() {
+  gameActive = false;
+
+  const scores = calculateScores(history, responses, nLevel);
+  updateResultsUI(scores);
+
   showScreen('start-screen');
 }
 
