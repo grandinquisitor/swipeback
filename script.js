@@ -158,7 +158,7 @@ function playClick() {
 let nLevel = 2;
 let numTrials = 20;
 let currentTrial = 0;
-let history = [];
+let sequence = [];  // Pre-generated game sequence
 let responses = [];
 let gameActive = false;
 let stimulusShown = false;
@@ -166,6 +166,103 @@ let gameTimeout = null;
 
 // Threshold for leveling up (80%)
 const LEVEL_UP_THRESHOLD = 80;
+
+// ===========================================
+// SEQUENCE GENERATION
+// ===========================================
+// Pre-generates the entire game sequence with guaranteed match counts.
+// This prevents variable difficulty from random match distributions
+// and eliminates accidental matches on non-match trials.
+
+function buildGameSequence(n, totalTrials) {
+  const matchableTrials = totalTrials - n;  // Trials where matches are possible
+
+  // Calculate match counts (roughly 30% each, with some dual matches)
+  // For 20 trials with n=2, that's 18 matchable trials
+  // Target: ~4 position-only, ~4 audio-only, ~2 dual = 6 total each type
+  const dualMatches = Math.max(1, Math.round(matchableTrials * 0.10));
+  const positionOnlyMatches = Math.max(2, Math.round(matchableTrials * 0.20));
+  const audioOnlyMatches = Math.max(2, Math.round(matchableTrials * 0.20));
+
+  // Pick which trial indices will have matches (indices are 0-based, starting from n)
+  const positionMatchTrials = new Set();
+  const audioMatchTrials = new Set();
+
+  // Helper: pick random trials that aren't already selected
+  function pickRandomTrials(count, excludeSet) {
+    const picked = [];
+    while (picked.length < count) {
+      const trial = n + Math.floor(Math.random() * matchableTrials);
+      if (!excludeSet.has(trial) && !picked.includes(trial)) {
+        picked.push(trial);
+      }
+    }
+    return picked;
+  }
+
+  // 1. Pick position-only matches
+  const posOnly = pickRandomTrials(positionOnlyMatches, new Set());
+  posOnly.forEach(t => positionMatchTrials.add(t));
+
+  // 2. Pick audio-only matches (excluding position matches)
+  const audOnly = pickRandomTrials(audioOnlyMatches, positionMatchTrials);
+  audOnly.forEach(t => audioMatchTrials.add(t));
+
+  // 3. Pick dual matches (new trials for both)
+  const excluded = new Set([...positionMatchTrials, ...audioMatchTrials]);
+  const dual = pickRandomTrials(dualMatches, excluded);
+  dual.forEach(t => {
+    positionMatchTrials.add(t);
+    audioMatchTrials.add(t);
+  });
+
+  // Now generate the actual sequence
+  const positions = [];
+  const letterSeq = [];
+
+  // Helper: pick a random value different from a target
+  function randomExcluding(max, exclude) {
+    const val = Math.floor(Math.random() * (max - 1));
+    return val >= exclude ? val + 1 : val;
+  }
+
+  for (let i = 0; i < totalTrials; i++) {
+    if (i < n) {
+      // First n trials: completely random
+      positions.push(Math.floor(Math.random() * 9));
+      letterSeq.push(letters[Math.floor(Math.random() * letters.length)]);
+    } else {
+      // Position: match or guaranteed non-match
+      if (positionMatchTrials.has(i)) {
+        positions.push(positions[i - n]);
+      } else {
+        positions.push(randomExcluding(9, positions[i - n]));
+      }
+
+      // Audio: match or guaranteed non-match
+      if (audioMatchTrials.has(i)) {
+        letterSeq.push(letterSeq[i - n]);
+      } else {
+        const prevLetterIndex = letters.indexOf(letterSeq[i - n]);
+        const newIndex = randomExcluding(letters.length, prevLetterIndex);
+        letterSeq.push(letters[newIndex]);
+      }
+    }
+  }
+
+  // Build sequence array with match flags for debugging/verification
+  const seq = [];
+  for (let i = 0; i < totalTrials; i++) {
+    seq.push({
+      position: positions[i],
+      letter: letterSeq[i],
+      isPositionMatch: positionMatchTrials.has(i),
+      isAudioMatch: audioMatchTrials.has(i)
+    });
+  }
+
+  return seq;
+}
 
 // Touch handling
 let touchStartX = 0;
@@ -207,8 +304,8 @@ async function startGame() {
   await initAudio();
 
   currentTrial = 0;
-  history = [];
-  responses = [];
+  sequence = buildGameSequence(nLevel, numTrials);
+  responses = sequence.map(() => ({ position: null, audio: null }));
   gameActive = true;
 
   document.getElementById('trial-total').textContent = numTrials;
@@ -225,29 +322,13 @@ function nextTrial() {
     return;
   }
 
-  // Determine if this should be a match (30% chance for each type after n trials)
-  let position, letter;
-
-  if (currentTrial >= nLevel && Math.random() < 0.3) {
-    position = history[currentTrial - nLevel].position;
-  } else {
-    position = Math.floor(Math.random() * 9);
-  }
-
-  if (currentTrial >= nLevel && Math.random() < 0.3) {
-    letter = history[currentTrial - nLevel].letter;
-  } else {
-    letter = letters[Math.floor(Math.random() * letters.length)];
-  }
-
-  history.push({ position, letter });
-  responses.push({ position: null, audio: null });
+  const stimulus = sequence[currentTrial];
 
   currentTrial++;
   document.getElementById('trial-num').textContent = currentTrial;
 
   // Show stimulus
-  showStimulus(position, letter);
+  showStimulus(stimulus.position, stimulus.letter);
   stimulusShown = true;
 
   // Hide after 500ms, then wait before next trial
@@ -320,13 +401,14 @@ function showFeedback(symbol) {
 // This ignores true negatives, measuring only "active" performance.
 // A player who never responds scores 0%, not 70%+ from TN inflation.
 
-function calculateScores(history, responses, nLevel) {
+function calculateScores(sequence, responses, nLevel) {
   let position = { tp: 0, fp: 0, fn: 0 };
   let audio = { tp: 0, fp: 0, fn: 0 };
 
-  for (let i = nLevel; i < history.length; i++) {
-    const wasPositionMatch = history[i].position === history[i - nLevel].position;
-    const wasAudioMatch = history[i].letter === history[i - nLevel].letter;
+  for (let i = nLevel; i < sequence.length; i++) {
+    // Use pre-computed match flags from sequence generation
+    const wasPositionMatch = sequence[i].isPositionMatch;
+    const wasAudioMatch = sequence[i].isAudioMatch;
 
     const response = responses[i];
     const respondedPosition = response.position === true;
@@ -394,7 +476,7 @@ function updateResultsUI(scores) {
 function endGame() {
   gameActive = false;
 
-  const scores = calculateScores(history, responses, nLevel);
+  const scores = calculateScores(sequence, responses, nLevel);
   recordSession(nLevel, scores, numTrials);
   updateResultsUI(scores);
 
