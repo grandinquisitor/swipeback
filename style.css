@@ -465,3 +465,26 @@ h1 {
   background: #553333;
   color: #eee;
 }
+
+/* ===========================================
+   TOUCH VS KEYBOARD HINTS
+   =========================================== */
+/* Default: show touch hints (mobile-first) */
+.keyboard-hint {
+  display: none;
+}
+
+.touch-hint {
+  display: inline;
+}
+
+/* On devices that primarily use pointer (desktop), hide touch hints */
+@media (hover: hover) and (pointer: fine) {
+  .touch-hint {
+    display: none;
+  }
+
+  .keyboard-hint {
+    display: inline;
+  }
+}

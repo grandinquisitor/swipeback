@@ -519,6 +519,39 @@ gameScreen.addEventListener('touchmove', (e) => {
 }, { passive: false });
 
 // ===========================================
+// KEYBOARD CONTROLS (Desktop)
+// ===========================================
+// Arrow keys map to same directions as swipes:
+// Left = position match, Right = audio match, Up = both, Down = neither
+
+document.addEventListener('keydown', (e) => {
+  if (!gameActive) return;
+
+  switch(e.key) {
+    case 'ArrowLeft':
+      handleInput('left');
+      e.preventDefault();
+      break;
+    case 'ArrowRight':
+      handleInput('right');
+      e.preventDefault();
+      break;
+    case 'ArrowUp':
+      handleInput('up');
+      e.preventDefault();
+      break;
+    case 'ArrowDown':
+      handleInput('down');
+      e.preventDefault();
+      break;
+    case 'Escape':
+      exitGame();
+      e.preventDefault();
+      break;
+  }
+});
+
+// ===========================================
 // LOCAL STORAGE STATS
 // ===========================================
 const STATS_KEY = 'swipeback_stats';
