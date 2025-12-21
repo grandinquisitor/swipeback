@@ -363,14 +363,13 @@ function handleInput(direction) {
 
   // Map swipe to response
   // left = position match, right = audio match, up = both, down = neither
+  // left and right are additive; down cancels previous input
   switch(direction) {
     case 'left':
       responses[responseIndex].position = true;
-      responses[responseIndex].audio = false;
       showFeedback('←');
       break;
     case 'right':
-      responses[responseIndex].position = false;
       responses[responseIndex].audio = true;
       showFeedback('→');
       break;
@@ -380,8 +379,8 @@ function handleInput(direction) {
       showFeedback('↑');
       break;
     case 'down':
-      responses[responseIndex].position = false;
-      responses[responseIndex].audio = false;
+      responses[responseIndex].position = null;
+      responses[responseIndex].audio = null;
       showFeedback('↓');
       break;
   }
