@@ -271,6 +271,15 @@ h1 {
   opacity: 1;
 }
 
+.cache-version {
+  position: fixed;
+  bottom: 15px;
+  left: 15px;
+  font-size: 0.7rem;
+  color: #555;
+  font-family: monospace;
+}
+
 /* Stats Button */
 .stats-btn {
   padding: 10px 15px;

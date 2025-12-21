@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v6';
+const CACHE_NAME = 'v7';
 const ASSETS = [
   './',
   './index.html',
@@ -62,4 +62,11 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request)
       .then(cached => cached || fetch(event.request))
   );
+});
+
+// Respond to version queries
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'GET_VERSION') {
+    event.source.postMessage({ type: 'VERSION', version: CACHE_NAME });
+  }
 });

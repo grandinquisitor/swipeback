@@ -606,3 +606,15 @@ function confirmClearStats() {
 
 // Start loading audio files on page load
 loadAudioFiles();
+
+// Display service worker cache version
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(reg => {
+    reg.active?.postMessage({ type: 'GET_VERSION' });
+  });
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data.type === 'VERSION') {
+      document.getElementById('cache-version').textContent = e.data.version;
+    }
+  });
+}
