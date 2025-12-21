@@ -281,8 +281,8 @@ h1 {
   color: #aaa;
   cursor: pointer;
   position: fixed;
-  bottom: 10px;
-  right: 10px;
+  bottom: 15px;
+  right: 15px;
 }
 
 .stats-btn:active {
