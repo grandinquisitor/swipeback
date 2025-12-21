@@ -178,8 +178,15 @@ h1 {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid #4a4a6a;
-  color: #6adb6a;
   font-size: 0.9rem;
+}
+
+.level-up-message.level-up {
+  color: #6adb6a;
+}
+
+.level-up-message.level-down {
+  color: #db6a6a;
 }
 
 /* Game Screen */

@@ -164,8 +164,9 @@ let gameActive = false;
 let stimulusShown = false;
 let gameTimeout = null;
 
-// Threshold for leveling up (80%)
-const LEVEL_UP_THRESHOLD = 80;
+// Thresholds for level changes
+const LEVEL_UP_THRESHOLD = 85;
+const LEVEL_DOWN_THRESHOLD = 70;
 
 // ===========================================
 // SEQUENCE GENERATION
@@ -462,10 +463,18 @@ function updateResultsUI(scores) {
   document.getElementById('last-results').classList.add('show');
 
   const levelUpMessage = document.getElementById('level-up-message');
+
   if (scores.overallPct >= LEVEL_UP_THRESHOLD && nLevel < 9) {
     nLevel++;
     document.getElementById('n-value').textContent = nLevel;
     levelUpMessage.textContent = `Level up! Now playing ${nLevel}-Back`;
+    levelUpMessage.className = 'level-up-message level-up';
+    levelUpMessage.style.display = 'block';
+  } else if (scores.overallPct < LEVEL_DOWN_THRESHOLD && nLevel > 1) {
+    nLevel--;
+    document.getElementById('n-value').textContent = nLevel;
+    levelUpMessage.textContent = `Dropped to ${nLevel}-Back`;
+    levelUpMessage.className = 'level-up-message level-down';
     levelUpMessage.style.display = 'block';
   } else {
     levelUpMessage.style.display = 'none';
