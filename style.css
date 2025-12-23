@@ -244,6 +244,7 @@ h1 {
   gap: 8px;
   width: min(80vw, 300px);
   height: min(80vw, 300px);
+  transition: all 0.15s ease-in-out;
 }
 
 .cell {
@@ -254,6 +255,15 @@ h1 {
 
 .cell.active {
   background: #4a6fa5;
+}
+
+/* Immediate correctness feedback - subtle border glow */
+.grid.feedback-correct {
+  box-shadow: 0 0 15px 3px rgba(100, 200, 100, 0.5);
+}
+
+.grid.feedback-incorrect {
+  box-shadow: 0 0 15px 3px rgba(200, 100, 100, 0.5);
 }
 
 .gesture-hint {

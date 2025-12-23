@@ -168,6 +168,10 @@ let gameTimeout = null;
 const LEVEL_UP_THRESHOLD = 85;
 const LEVEL_DOWN_THRESHOLD = 70;
 
+// Immediate feedback: show subtle correct/incorrect indicator on input
+// Set to false for "pure" training mode without feedback cues
+const SHOW_IMMEDIATE_FEEDBACK = true;
+
 // ===========================================
 // SEQUENCE GENERATION
 // ===========================================
@@ -340,6 +344,10 @@ function nextTrial() {
 
     gameTimeout = setTimeout(() => {
       if (!gameActive) return;
+
+      // Evaluate the trial that just ended (before showing next stimulus)
+      evaluateTrialFeedback(currentTrial - 1);
+
       nextTrial();
     }, 2000);
   }, 500);
@@ -385,6 +393,44 @@ function handleInput(direction) {
       showFeedback('\u2193'); // down arr
       break;
   }
+}
+
+// Evaluate and show correctness feedback for a completed trial
+function evaluateTrialFeedback(trialIndex) {
+  if (!SHOW_IMMEDIATE_FEEDBACK || trialIndex < nLevel) return;
+
+  const stimulus = sequence[trialIndex];
+  const response = responses[trialIndex];
+
+  const userResponded = response.position === true || response.audio === true;
+  const wasMatch = stimulus.isPositionMatch || stimulus.isAudioMatch;
+
+  // Skip feedback for true negatives (no input when there was no match)
+  if (!userResponded && !wasMatch) return;
+
+  // Evaluate final response state against actual matches
+  const positionCorrect = stimulus.isPositionMatch === (response.position === true);
+  const audioCorrect = stimulus.isAudioMatch === (response.audio === true);
+
+  showCorrectnessFeedback(positionCorrect && audioCorrect);
+}
+
+function showCorrectnessFeedback(isCorrect) {
+  const grid = document.querySelector('.grid');
+  const className = isCorrect ? 'feedback-correct' : 'feedback-incorrect';
+
+  // Remove any existing feedback classes
+  grid.classList.remove('feedback-correct', 'feedback-incorrect');
+
+  // Force reflow to restart animation
+  void grid.offsetWidth;
+
+  grid.classList.add(className);
+
+  // Remove after animation completes
+  setTimeout(() => {
+    grid.classList.remove(className);
+  }, 300);
 }
 
 function showFeedback(symbol) {
