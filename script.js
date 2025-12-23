@@ -368,21 +368,21 @@ function handleInput(direction) {
   switch(direction) {
     case 'left':
       responses[responseIndex].position = true;
-      showFeedback('&larr;');
+      showFeedback('\u2190'); // left arr
       break;
     case 'right':
       responses[responseIndex].audio = true;
-      showFeedback('&rarr;');
+      showFeedback('\u2192'); // right arr
       break;
     case 'up':
       responses[responseIndex].position = true;
       responses[responseIndex].audio = true;
-      showFeedback('&uarr;');
+      showFeedback('\u2191'); // up arr
       break;
     case 'down':
       responses[responseIndex].position = null;
       responses[responseIndex].audio = null;
-      showFeedback('&darr;');
+      showFeedback('\u2193'); // down arr
       break;
   }
 }
