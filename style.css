@@ -244,7 +244,7 @@ h1 {
   gap: 8px;
   width: min(80vw, 300px);
   height: min(80vw, 300px);
-  transition: all 0.15s ease-in-out;
+  position: relative;
 }
 
 .cell {
@@ -257,13 +257,43 @@ h1 {
   background: #4a6fa5;
 }
 
-/* Immediate correctness feedback - subtle border glow */
-.grid.feedback-correct {
-  box-shadow: 0 0 15px 3px rgba(100, 200, 100, 0.5);
+/* Center cross - focal point and feedback */
+.center-cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  color: #555;
+  pointer-events: none;
+  transition: transform 0.15s ease-out, color 0.15s ease-out;
+  z-index: 10;
 }
 
-.grid.feedback-incorrect {
-  box-shadow: 0 0 15px 3px rgba(200, 100, 100, 0.5);
+/* Directional shift on input */
+.center-cross.shift-left {
+  transform: translate(calc(-50% - 8px), -50%);
+}
+
+.center-cross.shift-right {
+  transform: translate(calc(-50% + 8px), -50%);
+}
+
+.center-cross.shift-up {
+  transform: translate(-50%, calc(-50% - 8px));
+}
+
+.center-cross.shift-down {
+  transform: translate(-50%, calc(-50% + 8px));
+}
+
+/* Correctness feedback colors */
+.center-cross.correct {
+  color: #6b6;
+}
+
+.center-cross.incorrect {
+  color: #b66;
 }
 
 .gesture-hint {
@@ -271,21 +301,6 @@ h1 {
   color: #666;
   font-size: 0.85rem;
   padding: 20px;
-}
-
-.feedback {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 3rem;
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-}
-
-.feedback.show {
-  opacity: 1;
 }
 
 .cache-version {

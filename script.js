@@ -376,23 +376,21 @@ function handleInput(direction) {
   switch(direction) {
     case 'left':
       responses[responseIndex].position = true;
-      showFeedback('\u2190'); // left arr
       break;
     case 'right':
       responses[responseIndex].audio = true;
-      showFeedback('\u2192'); // right arr
       break;
     case 'up':
       responses[responseIndex].position = true;
       responses[responseIndex].audio = true;
-      showFeedback('\u2191'); // up arr
       break;
     case 'down':
       responses[responseIndex].position = null;
       responses[responseIndex].audio = null;
-      showFeedback('\u2193'); // down arr
       break;
   }
+
+  showCrossShift(direction);
 }
 
 // Evaluate and show correctness feedback for a completed trial
@@ -402,42 +400,44 @@ function evaluateTrialFeedback(trialIndex) {
   const stimulus = sequence[trialIndex];
   const response = responses[trialIndex];
 
-  const userResponded = response.position === true || response.audio === true;
-  const wasMatch = stimulus.isPositionMatch || stimulus.isAudioMatch;
+  const positionResponded = response.position === true;
+  const audioResponded = response.audio === true;
+  const wasPositionMatch = stimulus.isPositionMatch;
+  const wasAudioMatch = stimulus.isAudioMatch;
 
-  // Skip feedback for true negatives (no input when there was no match)
-  if (!userResponded && !wasMatch) return;
+  // Skip feedback if no response and no match (true negative, nothing to show)
+  if (!positionResponded && !audioResponded && !wasPositionMatch && !wasAudioMatch) return;
 
-  // Evaluate final response state against actual matches
-  const positionCorrect = stimulus.isPositionMatch === (response.position === true);
-  const audioCorrect = stimulus.isAudioMatch === (response.audio === true);
+  const positionCorrect = wasPositionMatch === positionResponded;
+  const audioCorrect = wasAudioMatch === audioResponded;
 
-  showCorrectnessFeedback(positionCorrect && audioCorrect);
+  showCrossCorrectness(positionCorrect && audioCorrect);
 }
 
-function showCorrectnessFeedback(isCorrect) {
-  const grid = document.querySelector('.grid');
-  const className = isCorrect ? 'feedback-correct' : 'feedback-incorrect';
+function showCrossCorrectness(isCorrect) {
+  const cross = document.getElementById('center-cross');
 
-  // Remove any existing feedback classes
-  grid.classList.remove('feedback-correct', 'feedback-incorrect');
+  cross.classList.add(isCorrect ? 'correct' : 'incorrect');
 
-  // Force reflow to restart animation
-  void grid.offsetWidth;
-
-  grid.classList.add(className);
-
-  // Remove after animation completes
   setTimeout(() => {
-    grid.classList.remove(className);
-  }, 300);
+    cross.classList.remove('correct', 'incorrect');
+  }, 400);
 }
 
-function showFeedback(symbol) {
-  const fb = document.getElementById('feedback');
-  fb.textContent = symbol;
-  fb.classList.add('show');
-  setTimeout(() => fb.classList.remove('show'), 300);
+function showCrossShift(direction) {
+  const cross = document.getElementById('center-cross');
+
+  // Clear any existing shift
+  cross.classList.remove('shift-left', 'shift-right', 'shift-up', 'shift-down');
+
+  // Force reflow
+  void cross.offsetWidth;
+
+  cross.classList.add(`shift-${direction}`);
+
+  setTimeout(() => {
+    cross.classList.remove(`shift-${direction}`);
+  }, 150);
 }
 
 // ===========================================
