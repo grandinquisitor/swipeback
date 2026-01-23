@@ -92,7 +92,8 @@
     <div id="pause-modal" class="pause-modal">
       <div class="pause-content">
         <h2>Paused</h2>
-        <p>Trial <span id="pause-trial">0</span> of <span id="pause-total">20</span></p>
+        <p id="pause-status">Trial <span id="pause-trial">0</span> of <span id="pause-total">20</span></p>
+        <p id="continue-status"></p>
         <div class="pause-buttons">
           <button class="pause-btn continue-btn" ontouchend="resumeGame(); event.stopPropagation();" onclick="resumeGame()">Continue</button>
           <button class="pause-btn restart-btn" ontouchend="restartGame(); event.stopPropagation();" onclick="restartGame()">Restart</button>

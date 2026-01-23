@@ -468,6 +468,8 @@ function showPauseModal() {
   document.getElementById('pause-trial').textContent = currentTrial;
   document.getElementById('pause-total').textContent = numTrials;
   document.getElementById('pause-modal').classList.add('active');
+  document.getElementById('pause-status').style.display = 'block';
+  document.getElementById('continue-status').style.display = 'none';
 }
 
 function hidePauseModal() {
@@ -475,19 +477,33 @@ function hidePauseModal() {
 }
 
 function resumeGame() {
-  hidePauseModal();
-  // Small delay to let user refocus
-  gameTimeout = setTimeout(nextTrial, 500);
+  document.getElementById('continue-status').innerHTML = 'Resuming...';
+  document.getElementById('pause-status').style.display = 'none';
+  document.getElementById('continue-status').style.display = 'block';
+  gameTimeout = setTimeout(function() {
+    hidePauseModal();
+      //
+    // small delay to transition...
+    gameTimeout = setTimeout(nextTrial, 300);
+  }, 600);
 }
 
 function restartGame() {
-  hidePauseModal();
-  // Reset and start fresh with same settings
-  currentTrial = 0;
-  sequence = buildGameSequence(nLevel, numTrials);
-  responses = sequence.map(() => ({ position: null, audio: null }));
-  document.getElementById('trial-num').textContent = '0';
-  gameTimeout = setTimeout(nextTrial, 500);
+  document.getElementById('continue-status').innerHTML = 'Restarting...';
+  document.getElementById('pause-status').style.display = 'none';
+  document.getElementById('continue-status').style.display = 'block';
+
+  gameTimeout = setTimeout(function() {
+    hidePauseModal();
+    // Reset and start fresh with same settings
+    currentTrial = 0;
+    sequence = buildGameSequence(nLevel, numTrials);
+    responses = sequence.map(() => ({ position: null, audio: null }));
+    document.getElementById('trial-num').textContent = '0';
+
+    // small delay to transition...
+    gameTimeout = setTimeout(nextTrial, 300);
+  }, 600);
 }
 
 // ===========================================
