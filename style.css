@@ -336,7 +336,6 @@ h1 {
 
 /* Modal */
 .modal {
-  display: none;
   position: fixed;
   top: 0;
   left: 0;
@@ -344,13 +343,18 @@ h1 {
   height: 100%;
   background: rgba(0, 0, 0, 0.8);
   z-index: 100;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
 }
 
 .modal.active {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
 }
 
 .modal-content {
@@ -362,6 +366,12 @@ h1 {
   display: flex;
   flex-direction: column;
   border: 1px solid #4a4a6a;
+  transform: scale(0.95);
+  transition: transform 0.2s ease-out;
+}
+
+.modal.active .modal-content {
+  transform: scale(1);
 }
 
 .modal-header {
