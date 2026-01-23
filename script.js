@@ -111,9 +111,10 @@ function playLetter(letter) {
     return;
   }
 
-  // Resume context if suspended
+  // Don't even try if suspended - prevents queue buildup
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
+    return; // Skip this sound rather than queue it
   }
 
   const buffer = audioBuffers.get(letter);
@@ -439,6 +440,27 @@ function showCrossShift(direction) {
     cross.classList.remove(`shift-${direction}`);
   }, 150);
 }
+
+// Add visibility change handling to pause/resume cleanly
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Pause the game loop when backgrounded
+    if (gameActive && gameTimeout) {
+      clearTimeout(gameTimeout);
+      gameTimeout = null;
+    }
+  } else {
+    // Resume audio context and game when foregrounded
+    if (audioCtx?.state === 'suspended') {
+      audioCtx.resume();
+    }
+    // Resume game loop if we were mid-game
+    if (gameActive && !gameTimeout) {
+      // Small delay to let audio context fully resume
+      gameTimeout = setTimeout(nextTrial, 500);
+    }
+  }
+});
 
 // ===========================================
 // SCORE CALCULATION
