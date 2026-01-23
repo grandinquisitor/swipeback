@@ -88,6 +88,18 @@
 
   <!-- Game Screen -->
   <div id="game-screen" class="screen">
+    <!-- Pause Modal -->
+    <div id="pause-modal" class="pause-modal">
+      <div class="pause-content">
+        <h2>Paused</h2>
+        <p>Trial <span id="pause-trial">0</span> of <span id="pause-total">20</span></p>
+        <div class="pause-buttons">
+          <button class="pause-btn continue-btn" ontouchend="resumeGame(); event.stopPropagation();" onclick="resumeGame()">Continue</button>
+          <button class="pause-btn restart-btn" ontouchend="restartGame(); event.stopPropagation();" onclick="restartGame()">Restart</button>
+        </div>
+      </div>
+    </div>
+
     <div class="status-bar">
       <span class="trial-info">Trial: <span id="trial-num">0</span>/<span id="trial-total">20</span></span>
       <span class="n-display" id="n-display">2-Back</span>

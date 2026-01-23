@@ -300,6 +300,7 @@ function exitGame() {
     gameTimeout = null;
   }
   hideStimulus();
+  hidePauseModal();
   showScreen('start-screen');
 }
 
@@ -448,19 +449,46 @@ document.addEventListener('visibilitychange', () => {
     if (gameActive && gameTimeout) {
       clearTimeout(gameTimeout);
       gameTimeout = null;
+      hideStimulus();
+      stimulusShown = false;
     }
   } else {
-    // Resume audio context and game when foregrounded
+    // Resume audio context when foregrounded
     if (audioCtx?.state === 'suspended') {
       audioCtx.resume();
     }
-    // Resume game loop if we were mid-game
+    // Show pause modal if we were mid-game
     if (gameActive && !gameTimeout) {
-      // Small delay to let audio context fully resume
-      gameTimeout = setTimeout(nextTrial, 500);
+      showPauseModal();
     }
   }
 });
+
+function showPauseModal() {
+  document.getElementById('pause-trial').textContent = currentTrial;
+  document.getElementById('pause-total').textContent = numTrials;
+  document.getElementById('pause-modal').classList.add('active');
+}
+
+function hidePauseModal() {
+  document.getElementById('pause-modal').classList.remove('active');
+}
+
+function resumeGame() {
+  hidePauseModal();
+  // Small delay to let user refocus
+  gameTimeout = setTimeout(nextTrial, 500);
+}
+
+function restartGame() {
+  hidePauseModal();
+  // Reset and start fresh with same settings
+  currentTrial = 0;
+  sequence = buildGameSequence(nLevel, numTrials);
+  responses = sequence.map(() => ({ position: null, audio: null }));
+  document.getElementById('trial-num').textContent = '0';
+  gameTimeout = setTimeout(nextTrial, 500);
+}
 
 // ===========================================
 // SCORE CALCULATION
