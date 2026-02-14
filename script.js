@@ -319,7 +319,7 @@ async function startGame() {
   document.getElementById('n-display').textContent = `${nLevel}-Back`;
 
   showScreen('game-screen');
-  document.getElementById('gesture-hint').style.visibility = 'hidden';
+  document.getElementById('gesture-hint').style.opacity = '0';
 
   gameTimeout = setTimeout(nextTrial, 1000);
 }
@@ -337,7 +337,7 @@ function nextTrial() {
 
   // Show gesture hint once responses become meaningful
   if (currentTrial === nLevel + 1) {
-    document.getElementById('gesture-hint').style.visibility = 'visible';
+    document.getElementById('gesture-hint').style.opacity = '1';
   }
 
   // Show stimulus
