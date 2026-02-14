@@ -319,6 +319,7 @@ async function startGame() {
   document.getElementById('n-display').textContent = `${nLevel}-Back`;
 
   showScreen('game-screen');
+  document.getElementById('gesture-hint').style.visibility = 'hidden';
 
   gameTimeout = setTimeout(nextTrial, 1000);
 }
@@ -333,6 +334,11 @@ function nextTrial() {
 
   currentTrial++;
   document.getElementById('trial-num').textContent = currentTrial;
+
+  // Show gesture hint once responses become meaningful
+  if (currentTrial === nLevel + 1) {
+    document.getElementById('gesture-hint').style.visibility = 'visible';
+  }
 
   // Show stimulus
   showStimulus(stimulus.position, stimulus.letter);
@@ -366,7 +372,7 @@ function hideStimulus() {
 }
 
 function handleInput(direction) {
-  if (!gameActive || currentTrial === 0) return;
+  if (!gameActive || currentTrial < nLevel + 1) return;
 
   playClick();
 
